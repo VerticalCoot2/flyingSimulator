@@ -1,9 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Windows.Speech;
+using TMPro;
+using UnityEngine.SceneManagement;
 
 public class FlyingScript : MonoBehaviour
 {
@@ -16,6 +15,12 @@ public class FlyingScript : MonoBehaviour
     [SerializeField] private List<GameObject> CheckpointList;
     [SerializeField] private int CheckpointCounter = -1;
     [SerializeField] Transform checkPointHolder;
+
+    //új változók:
+    [SerializeField] public TMP_Text timerText;
+    float timeLeft = 10;
+    float finishedTime;
+    bool round = false;
 
     Vector3 spawnPos = new Vector3(215, 70, 260);
 
@@ -30,6 +35,7 @@ public class FlyingScript : MonoBehaviour
 
     void Start()
     {
+        round = true;
         Cursor.lockState = CursorLockMode.Locked;
     }
 
@@ -38,6 +44,25 @@ public class FlyingScript : MonoBehaviour
     {
         Movement();
         CheckpointHandler();
+        CountDown();
+    }
+    void CountDown()
+    {
+        if(timeLeft > 0 && round)
+        {
+            timeLeft -= Time.deltaTime;
+            timerText.text = (Mathf.Round(timeLeft)).ToString();
+        }
+        else
+        {
+            StartCoroutine(Restart());
+        }
+    }
+    IEnumerator Restart()
+    {
+        anim.SetBool("Fading", true);
+        yield return new WaitForSeconds(2);
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex); // restarts the scene
     }
 
     void CheckpointHandler()
@@ -59,7 +84,12 @@ public class FlyingScript : MonoBehaviour
             case "Respawn":
                 CheckpointCounter++;
                 other.transform.parent.gameObject.SetActive(false);
+                timeLeft += 10;
                 break;
+        }
+        if(CheckpointCounter == CheckpointList.Count - 1)
+        {
+            WIN();
         }
     }
 
@@ -73,13 +103,13 @@ public class FlyingScript : MonoBehaviour
         pitch = Mathf.Clamp(pitch, -80f, 80f);
 
         //apply rotation to transform
-        transform.rotation = Quaternion.Euler(pitch, yaw, 0);
+        transform.rotation = Quaternion.Euler(-pitch, yaw, 0);
 
         //move forward automatically
         transform.position += transform.forward * speed * Time.deltaTime;
 
         //quitting
-        if (Input.GetKeyUp(KeyCode.Escape))
+        if (Input.GetKeyUp(KeyCode.Return))
         {
             StartCoroutine(Quit());
         }
@@ -109,5 +139,12 @@ public class FlyingScript : MonoBehaviour
         transform.position = spawnPos; //alpaeset: Vector3(215, 70, 260);
         speed = 10;
         anim.SetBool("Fading", false);
+    }
+
+    void WIN()
+    {
+        round = false;
+        finishedTime = timeLeft;
+        timerText.text = "Yay u won! time: " + finishedTime;
     }
 }
